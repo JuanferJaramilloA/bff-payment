@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:8080
+@walletId = WALLET123
+@x-service = bancolombia
+
+POST https://test.security.flypass.co/flypass/secure/oauth/token
+Authorization: Basic Zmx5cGFzczpSbXg1ZEdWamFDNHlNREUz
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&username=1017241310&password=Flypass_2017
+
+> {% client.global.set("access_token", response.body.access_token); %}
+
+### 2) BFF (default)
+GET {{baseUrl}}/wallet/{{walletId}}/payment-methods
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+### 4) BFF (forzando connector via header)
+GET {{baseUrl}}/wallet/{{walletId}}/payment-methods
+Authorization: Bearer {{access_token}}
+X-Service: {{x-service}}
+Accept: application/json
+
+### 5) Endpoint Bancolombia Integration (directo)
+GET https://test.security.flypass.co/flypass/bancolombia-integration/user/paymentMode?noMatterStatusPaymentMethod=true
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
