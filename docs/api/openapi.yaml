@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: BFF Payments - Flypass
+  version: 1.0.0
+  description: Minimal OpenAPI for listing wallet payment methods
+servers:
+  - url: http://localhost:8080
+paths:
+  /wallet/{walletId}/payment-methods:
+    get:
+      summary: List payment methods for a wallet
+      description: |
+        Provider selection precedence: Query parameter > Header > Default.
+        When both are present, the query parameter wins.
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: connector
+          in: query
+          required: false
+          description: |
+            Connector/service identifier. Precedence: Query > Header > Default.
+          schema:
+            type: string
+        - name: X-Service-Id
+          in: header
+          required: false
+          description: |
+            Connector/service identifier. Used if query param is absent.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethodListItem'
+        '4xx':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    PaymentMethodListItem:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        type:
+          type: string
+        enabled:
+          type: boolean
+        holderName:
+          type: string
+          nullable: true
+        maskedNumber:
+          type: string
+          nullable: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

@@ -2,19 +2,28 @@ package com.co.flypass.payments.bff.router;
 
 import java.util.Locale;
 
-public enum ServiceId {
-    BANCOLOMBIA("bancolombia");
+public record ServiceId(String value) {
 
-    private final String value;
-
-    ServiceId(String value) { this.value = value; }
-
-    public String value() { return value; }
-
-    public static ServiceId from(String raw) {
+    public static String normalize(String raw, boolean removeInnerSpaces) {
         if (raw == null) return null;
         String v = raw.trim().toLowerCase(Locale.ROOT);
-        for (var s : values()) if (s.value.equals(v)) return s;
-        return null;
+        if (removeInnerSpaces) v = v.replace(" ", "");
+        if (v.isBlank()) return null;
+        return v;
+    }
+
+    public static String normalize(String raw) {
+        return normalize(raw, true);
+    }
+
+    public static ServiceId from(String raw) {
+        String n = normalize(raw, true);
+        if (n == null) throw new IllegalArgumentException("serviceId must not be null or blank");
+        return new ServiceId(n);
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

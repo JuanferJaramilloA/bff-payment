@@ -2,9 +2,14 @@ package com.co.flypass.payments.bff.router.resolve;
 
 import com.co.flypass.payments.bff.router.RouteContext;
 import com.co.flypass.payments.bff.router.ServiceId;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
-public class HeaderPolicy implements RouteResolutionPolicy {
-    @Override public ServiceId resolve(RouteContext routeContext) {
-        return ServiceId.from(routeContext.serviceIdFromHeader());
+public final class HeaderPolicy implements RouteResolutionPolicy {
+    @Override
+    public @Nullable ServiceId resolve(@NonNull RouteContext routeContext) {
+        String raw = routeContext.serviceIdFromHeader();
+        if (raw == null || raw.isBlank()) return null;
+        return ServiceId.from(raw);
     }
 }

@@ -9,14 +9,34 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class RouteResolverConfig {
+
     @Bean
-    RouteResolver routeResolver() {
+    public QueryParamPolicy queryParamPolicy() {
+        return new QueryParamPolicy();
+    }
+
+    @Bean
+    public HeaderPolicy headerPolicy() {
+        return new HeaderPolicy();
+    }
+
+    @Bean
+    public DefaultPolicy defaultPolicy() {
+        return new DefaultPolicy();
+    }
+
+    @Bean
+    public RouteResolver routeResolver(
+            QueryParamPolicy queryParamPolicy,
+            HeaderPolicy headerPolicy,
+            DefaultPolicy defaultPolicy
+    ) {
         return new RouteResolver(List.of(
-                new QueryParamPolicy(),
-                new HeaderPolicy(),
-                new DefaultPolicy()
+                queryParamPolicy,
+                headerPolicy,
+                defaultPolicy
         ));
     }
 }
