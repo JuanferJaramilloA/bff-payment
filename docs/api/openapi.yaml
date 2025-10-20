@@ -5,31 +5,29 @@ info:
   description: Minimal OpenAPI for listing wallet payment methods
 servers:
   - url: http://localhost:8080
+
+security:
+  - bearerAuth: []
+
 paths:
   /wallet/{walletId}/payment-methods:
     get:
       summary: List payment methods for a wallet
       description: |
-        Provider selection precedence: Query parameter > Header > Default.
-        When both are present, the query parameter wins.
+        Provider selection:
+        - Precedence: Header `X-Service-Id` > Default configured.
+        - Authorization is required and is propagated downstream when present.
       parameters:
         - name: walletId
           in: path
           required: true
           schema:
             type: string
-        - name: connector
-          in: query
-          required: false
-          description: |
-            Connector/service identifier. Precedence: Query > Header > Default.
-          schema:
-            type: string
         - name: X-Service-Id
           in: header
           required: false
-          description: |
-            Connector/service identifier. Used if query param is absent.
+          description: >
+            Provider/service identifier. If absent, the default configured service will be used.
           schema:
             type: string
       responses:
@@ -41,25 +39,61 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PaymentMethodListItem'
-        '4xx':
-          description: Client error
+        '400':
+          description: Bad Request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (missing/invalid Authorization header)
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable (upstream provider)
+          headers:
+            Retry-After:
+              schema:
+                type: string
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     PaymentMethodListItem:
       type: object
       properties:
-        name:
-          type: string
         brand:
           type: string
           nullable: true
-        type:
+        brandIconUrl:
           type: string
-        enabled:
+          nullable: true
+        productLabel:
+          type: string
+        isDefault:
           type: boolean
         holderName:
           type: string
@@ -67,10 +101,28 @@ components:
         maskedNumber:
           type: string
           nullable: true
+      required:
+        - productLabel
+        - isDefault
+
     ErrorResponse:
       type: object
       properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
         error:
           type: string
         message:
           type: string
+        correlationId:
+          type: string
+        details:
+          type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
