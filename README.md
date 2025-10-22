@@ -55,10 +55,15 @@ El componente Router es el encargado de decidir, en cada petición, a qué micro
 
 Obtiene los métodos de pago asociados a una wallet.
 
-### Headers obligatorios
-```http
-Authorization: Bearer <token>
-X-Service-Id: bancolombia
+### Headers
+- Obligatorio: Authorization: Bearer <token>
+- Opcional: X-Service-Id: <id>
+
+#### Ejemplo curl
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "X-Service-Id: bancolombia" \
+     http://localhost:8080/wallet/w123/payment-methods
 ```
 
 ### Ejemplo de respuesta (200 OK)

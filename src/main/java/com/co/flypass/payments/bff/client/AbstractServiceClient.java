@@ -56,8 +56,8 @@ public abstract class AbstractServiceClient<R> implements ServiceClient {
 
         final String previousCorr = setCorrelationIdIfAbsent();
         try {
-            log.info("payments.list.start provider={} walletId_masked={} status=start",
-                    providerId, maskWallet(walletId));
+            log.info("payments.list.start provider={} correlationId={} walletId_masked={} result=start",
+                    providerId, MDC.get(CORRELATION_ID_KEY), maskWallet(walletId));
 
             final CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(providerId);
             final Retry retry = retryRegistry.retry(providerId);
@@ -71,16 +71,16 @@ public abstract class AbstractServiceClient<R> implements ServiceClient {
             recordMetrics(providerId, start, RESULT_SUCCESS);
 
             final long elapsedMs = Duration.ofNanos(System.nanoTime() - start).toMillis();
-            log.info("payments.list.success provider={} walletId_masked={} elapsed_ms={} status=success",
-                    providerId, maskWallet(walletId), elapsedMs);
+            log.info("payments.list.success provider={} correlationId={} walletId_masked={} elapsed_ms={} result=success",
+                    providerId, MDC.get(CORRELATION_ID_KEY), maskWallet(walletId), elapsedMs);
 
             return result == null ? List.of() : result;
         } catch (Throwable t) {
             recordMetrics(providerId, start, RESULT_ERROR);
 
             final long elapsedMs = Duration.ofNanos(System.nanoTime() - start).toMillis();
-            log.warn("payments.list.error provider={} walletId_masked={} elapsed_ms={} status=error msg={}",
-                    providerId, maskWallet(walletId), elapsedMs, String.valueOf(t));
+            log.warn("payments.list.error provider={} correlationId={} walletId_masked={} elapsed_ms={} result=error msg={}",
+                    providerId, MDC.get(CORRELATION_ID_KEY), maskWallet(walletId), elapsedMs, String.valueOf(t));
 
             throw translateException(t);
         } finally {
@@ -126,11 +126,7 @@ public abstract class AbstractServiceClient<R> implements ServiceClient {
     }
 
     private static void restoreCorrelationId(String previous) {
-        if (previous == null) {
-            MDC.remove(CORRELATION_ID_KEY);
-        } else {
-            MDC.put(CORRELATION_ID_KEY, previous);
-        }
+        MDC.remove(CORRELATION_ID_KEY);
     }
 
     private static String maskWallet(String walletId) {

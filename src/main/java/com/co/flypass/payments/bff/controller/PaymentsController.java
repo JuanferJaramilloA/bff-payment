@@ -29,9 +29,8 @@ public class PaymentsController {
             description = """
             Requiere autenticación (Bearer).
             Selección de proveedor:
-            - Precedencia: Query `connector` > Header `X-Service-Id` > Default configurado.
-            - Si vienen ambos (query y header), GANA el query.
-            - El token Bearer se propaga al proveedor cuando aplica.
+            - Header `X-Service-Id`. Si no viene, se usa el default configurado.
+            El token Bearer se propaga al proveedor cuando aplica.
             """
     )
     @GetMapping("/wallet/{walletId}/payment-methods")
@@ -43,17 +42,12 @@ public class PaymentsController {
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = true) String authorizationHeader,
 
             @Parameter(name = "X-Service-Id", in = ParameterIn.HEADER, required = false,
-                    description = "Identificador del proveedor cuando el query param no está presente.")
-            @RequestHeader(value = "X-Service-Id", required = false) String serviceIdFromHeader,
-
-            @Parameter(name = "connector", in = ParameterIn.QUERY, required = false,
-                    description = "Identificador del proveedor. Precedencia: Query > Header > Default.")
-            @RequestParam(value = "connector", required = false) String serviceIdFromQuery
+                    description = "Identificador del proveedor. Si se omite, se usa el default.")
+            @RequestHeader(value = "X-Service-Id", required = false) String serviceIdFromHeader
     ) {
         return paymentsService.getPaymentMethods(
                 walletId,
                 authorizationHeader,
-                serviceIdFromQuery,
                 serviceIdFromHeader
         );
     }

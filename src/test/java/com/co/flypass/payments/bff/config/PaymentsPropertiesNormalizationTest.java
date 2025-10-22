@@ -26,17 +26,17 @@ class PaymentsPropertiesNormalizationTest {
     }
 
     @Test
-    void serviceId_and_properties_normalize_equally_externalPayments() {
+    void serviceId_and_properties_normalize_equally_external() {
         PaymentsProperties.ServiceConfig cfg = new PaymentsProperties.ServiceConfig(
                 "http://external", Duration.ofMillis(300), Duration.ofMillis(600), 3);
         PaymentsProperties props = new PaymentsProperties(
-                " External  Payments ",
-                Map.of(" External  Payments ", cfg)
+                "  External  ",
+                Map.of("  External  ", cfg)
         );
 
-        String normRouter = ServiceId.normalize(" External  Payments ", true);
-        assertEquals("externalpayments", normRouter);
+        String normRouter = ServiceId.normalize("  External  ", true);
+        assertEquals("external", normRouter);
         assertEquals(normRouter, props.getDefaultServiceId());
-        assertSame(cfg, props.require(" external   payments "));
+        assertSame(cfg, props.require(" e x t e r n a l "));
     }
 }

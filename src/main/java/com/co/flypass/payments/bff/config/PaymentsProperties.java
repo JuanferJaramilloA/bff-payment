@@ -14,8 +14,10 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
@@ -59,6 +61,20 @@ public final class PaymentsProperties {
             if (!key.equals(routerNorm)) {
                 throw new IllegalStateException(
                         "Invalid key normalization for services-by-id: '" + key + "' should be '" + routerNorm + "'");
+            }
+        }
+
+        final Set<String> allowed = Arrays.stream(ServiceId.values())
+                .map(ServiceId::value)
+                .collect(Collectors.toUnmodifiableSet());
+        if (!allowed.contains(normalizedDefault)) {
+            throw new IllegalStateException(
+                    "Invalid configuration: 'payments.default-service-id' (" + normalizedDefault + ") must be one of: " + allowed);
+        }
+        for (String key : normalizedMap.keySet()) {
+            if (!allowed.contains(key)) {
+                throw new IllegalStateException(
+                        "Invalid configuration: 'payments.services-by-id' contains unknown id '" + key + "'. Allowed: " + allowed);
             }
         }
 

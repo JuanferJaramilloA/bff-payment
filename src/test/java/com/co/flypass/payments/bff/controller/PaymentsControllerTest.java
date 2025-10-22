@@ -1,6 +1,6 @@
 package com.co.flypass.payments.bff.controller;
 
-import com.co.flypass.payments.bff.exception.UnknownConnectorException;
+import com.co.flypass.payments.bff.exception.UnknownServiceIdException;
 import com.co.flypass.payments.bff.model.PaymentMethodListItem;
 import com.co.flypass.payments.bff.service.PaymentsService;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class PaymentsControllerTest {
 
     @Test
     void getPaymentMethods_returns_list_of_listItems() throws Exception {
-        when(paymentsService.getPaymentMethods(eq("w123"), eq("Bearer abc"), org.mockito.ArgumentMatchers.nullable(String.class), org.mockito.ArgumentMatchers.nullable(String.class)))
+        when(paymentsService.getPaymentMethods(eq("w123"), eq("Bearer abc"), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .thenReturn(List.of(new PaymentMethodListItem(
                         "Mastercard",
                         "assets/general/images/Mastercard.svg",
@@ -56,36 +56,32 @@ class PaymentsControllerTest {
     }
 
     @Test
-    void query_param_wins_over_header_when_both_present_mapping_to_service_layer() throws Exception {
-        when(paymentsService.getPaymentMethods(eq("wid"), eq("Bearer tk"), anyString(), anyString()))
+    void passes_header_to_service_layer_when_present() throws Exception {
+        when(paymentsService.getPaymentMethods(eq("wid"), eq("Bearer tk"), eq("bancolombia")))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/wallet/{walletId}/payment-methods", "wid")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer tk")
                         .header("X-Service-Id", "bancolombia")
-                        .queryParam("connector", "external")
                 )
                 .andExpect(status().isOk());
 
-        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> headerCaptor = ArgumentCaptor.forClass(String.class);
-        verify(paymentsService).getPaymentMethods(eq("wid"), eq("Bearer tk"), queryCaptor.capture(), headerCaptor.capture());
-        // Controller must pass both; precedence is applied in service/router, which is separately unit-tested
-        org.junit.jupiter.api.Assertions.assertEquals("external", queryCaptor.getValue());
+        verify(paymentsService).getPaymentMethods(eq("wid"), eq("Bearer tk"), headerCaptor.capture());
         org.junit.jupiter.api.Assertions.assertEquals("bancolombia", headerCaptor.getValue());
     }
 
     @Test
     void unknown_provider_returns_400_with_expected_body() throws Exception {
-        when(paymentsService.getPaymentMethods(eq("w999"), eq("Bearer abc"), eq("unknown"), org.mockito.ArgumentMatchers.nullable(String.class)))
-                .thenThrow(new UnknownConnectorException("unknown", Set.of("bancolombia", "external")));
+        when(paymentsService.getPaymentMethods(eq("w999"), eq("Bearer abc"), eq("unknown")))
+                .thenThrow(new UnknownServiceIdException("unknown", Set.of("bancolombia", "external")));
 
         mockMvc.perform(get("/wallet/{walletId}/payment-methods", "w999")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer abc")
-                        .queryParam("connector", "unknown")
+                        .header("X-Service-Id", "unknown")
                 )
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("INVALID_CONNECTOR"))
+                .andExpect(jsonPath("$.error").value("INVALID_SERVICE_ID"))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("unknown")));
     }
 }

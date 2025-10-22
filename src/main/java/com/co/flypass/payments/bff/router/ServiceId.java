@@ -2,7 +2,24 @@ package com.co.flypass.payments.bff.router;
 
 import java.util.Locale;
 
-public record ServiceId(String value) {
+public enum ServiceId {
+    BANCOLOMBIA("bancolombia"),
+    EXTERNAL("external");
+
+    private final String id;
+
+    ServiceId(String id) {
+        this.id = id;
+    }
+
+    public String value() {
+        return id;
+    }
+
+    @Override
+    public String toString() {
+        return id;
+    }
 
     public static String normalize(String raw, boolean removeInnerSpaces) {
         if (raw == null) return null;
@@ -19,11 +36,9 @@ public record ServiceId(String value) {
     public static ServiceId from(String raw) {
         String n = normalize(raw, true);
         if (n == null) throw new IllegalArgumentException("serviceId must not be null or blank");
-        return new ServiceId(n);
-    }
-
-    @Override
-    public String toString() {
-        return value;
+        for (ServiceId sid : values()) {
+            if (sid.id.equals(n)) return sid;
+        }
+        throw new IllegalArgumentException("Unknown serviceId: '" + raw + "'. Allowed: " + java.util.Arrays.toString(values()));
     }
 }

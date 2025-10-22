@@ -15,40 +15,44 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface PaymentMethodListItemMapper {
 
-    @Mapping(target = "brand",        source = "body.userPaymentMethod.franchise.name")
+    @Mapping(target = "brand",        source = "body.userPaymentMethod.franchise.name", qualifiedByName = "normalizeBrand")
     @Mapping(target = "brandIconUrl", source = "body.userPaymentMethod.franchise.picture")
     @Mapping(target = "productLabel", source = "body.userPaymentMethod.productType.name",
-            qualifiedByName = "extractProductLabelOrNull")
+            qualifiedByName = "normalizeProductLabel")
     @Mapping(target = "isDefault",    source = "body.selected")
-    @Mapping(target = "holderName",   source = ".", qualifiedByName = "extractHolderNameOrNull")
-    @Mapping(target = "maskedNumber", source = ".", qualifiedByName = "extractSuffixOrNull")
+    @Mapping(target = "holderName",   source = ".", qualifiedByName = "extractHolderNameOrDefault")
+    @Mapping(target = "maskedNumber", source = ".", qualifiedByName = "extractAndMaskSuffix")
     PaymentMethodListItem toListItem(BancolombiaPaymentModeApiResponse src);
 
-    @Named("extractProductLabelOrNull")
-    default String extractProductLabelOrNull(String productTypeName) {
-        if (productTypeName == null) return null;
-        String t = productTypeName.trim();
-        return t.isEmpty() ? null : t;
+    @Named("normalizeBrand")
+    default String normalizeBrand(String brand) {
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.normalizeBrand(brand);
     }
 
-    @Named("extractHolderNameOrNull")
-    default String extractHolderNameOrNull(BancolombiaPaymentModeApiResponse src) {
-        if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return null;
+    @Named("normalizeProductLabel")
+    default String normalizeProductLabel(String productTypeName) {
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.normalizeProductLabel(productTypeName, "");
+    }
+
+    @Named("extractHolderNameOrDefault")
+    default String extractHolderNameOrDefault(BancolombiaPaymentModeApiResponse src) {
+        if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return "Titular";
         var upm = src.body().userPaymentMethod();
         if (upm.user() == null || upm.user().secureUser() == null || upm.user().secureUser().person() == null) {
-            return null;
+            return "Titular";
         }
         var p = upm.user().secureUser().person();
         if (p.fullName() != null && !p.fullName().isBlank()) return p.fullName().trim();
         String names = p.names() == null ? "" : p.names().trim();
         String surnames = p.surnames() == null ? "" : p.surnames().trim();
         String combined = (names + " " + surnames).trim();
-        return combined.isEmpty() ? null : combined;
+        return combined.isEmpty() ? "Titular" : combined;
     }
 
-    @Named("extractSuffixOrNull")
-    default String extractSuffixOrNull(BancolombiaPaymentModeApiResponse src) {
-        if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return null;
-        return src.body().userPaymentMethod().suffixAccount();
+    @Named("extractAndMaskSuffix")
+    default String extractAndMaskSuffix(BancolombiaPaymentModeApiResponse src) {
+        if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return "****";
+        String suffix = src.body().userPaymentMethod().suffixAccount();
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.maskCardNumber(suffix);
     }
 }

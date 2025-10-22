@@ -32,7 +32,7 @@ public final class BancolombiaAdapter {
         return new PaymentMethodListItem(
                 brand,
                 item.brandIconUrl(),
-                NormalizationUtils.defaultIfBlank(item.productLabel(), ""),
+                NormalizationUtils.normalizeProductLabel(item.productLabel(), ""),
                 item.isDefault(),
                 NormalizationUtils.defaultIfBlank(item.holderName(), ""),
                 masked

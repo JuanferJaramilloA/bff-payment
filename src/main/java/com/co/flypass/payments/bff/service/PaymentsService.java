@@ -25,7 +25,6 @@ public class PaymentsService {
     public List<PaymentMethodListItem> getPaymentMethods(
             String walletId,
             String authorizationHeader,
-            String serviceIdFromQuery,
             String serviceIdFromHeader
     ) {
         validateWalletId(walletId);
@@ -34,7 +33,6 @@ public class PaymentsService {
         validateUserPermissions(userId, "READ_PAYMENT_METHODS");
 
         RouteContext routeContext = new RouteContext(
-                serviceIdFromQuery,
                 serviceIdFromHeader,
                 paymentsProperties.getDefaultServiceId()
         );
@@ -75,6 +73,15 @@ public class PaymentsService {
         if (!allowed) {
             throw BusinessValidationException.forbidden("PERMISSION_DENIED",
                     "User lacks required permission: " + permission);
+        }
+    }
+
+    public void validateUserOwnsWallet(String userId, String walletId) {
+        if (walletId == null || walletId.isBlank()) {
+            throw BusinessValidationException.badRequest("WALLET_ID_REQUIRED", "walletId must not be blank");
+        }
+        if (!walletId.startsWith("user-")) {
+            throw BusinessValidationException.forbidden("WALLET_NOT_OWNED", "Wallet does not belong to user");
         }
     }
 }

@@ -23,8 +23,8 @@ public final class ExternalPaymentsAdapter {
     private static PaymentMethodListItem mapItem(ExternalPaymentsApiResponse.Item item) {
         final String brand        = NormalizationUtils.normalizeBrand(item.brand());
         final String masked       = NormalizationUtils.maskCardNumber(item.masked());
-        final String productLabel = NormalizationUtils.defaultIfBlank(item.productLabel(), "");
-        final String holderName   = NormalizationUtils.defaultIfBlank(item.holderName(), "");
+        final String productLabel = NormalizationUtils.normalizeProductLabel(item.productLabel(), "");
+        final String holderName   = NormalizationUtils.defaultIfBlank(item.holderName(), "Titular");
         final String brandIconUrl = NormalizationUtils.defaultIfBlank(item.brandIconUrl(), "");
 
         return new PaymentMethodListItem(
