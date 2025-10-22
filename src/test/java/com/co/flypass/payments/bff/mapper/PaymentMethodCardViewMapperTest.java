@@ -37,10 +37,10 @@ class PaymentMethodListItemMapperTest {
     @Test
     void maskedNumber_uses_last4_digits_and_cleans_non_numeric_and_null() {
         var one = dto("Visa", "assets/general/images/Visa.svg", "credito", true, "X", "AB12 34 56 78");
-        assertThat(mapper.toListItem(one).maskedNumber()).isEqualTo("************5678");
+        assertThat(mapper.toListItem(one).maskedNumber()).isEqualTo("****5678");
 
         var two = dto("Amex", "assets/general/images/Amex.svg", "debito", false, "Y", null);
-        assertThat(mapper.toListItem(two).maskedNumber()).isEqualTo("************");
+        assertThat(mapper.toListItem(two).maskedNumber()).isEqualTo("****");
     }
 
     @Test

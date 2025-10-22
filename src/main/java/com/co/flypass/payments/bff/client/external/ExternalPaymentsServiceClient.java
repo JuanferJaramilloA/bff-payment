@@ -1,9 +1,9 @@
-package com.co.flypass.payments.bff.client.bancolombia;
+package com.co.flypass.payments.bff.client.external;
 
-import com.co.flypass.payments.bff.adapter.BancolombiaAdapter;
+import com.co.flypass.payments.bff.adapter.ExternalPaymentsAdapter;
 import com.co.flypass.payments.bff.client.AbstractServiceClient;
-import com.co.flypass.payments.bff.client.bancolombia.dto.BancolombiaPaymentModeApiResponse;
 import com.co.flypass.payments.bff.client.metadata.ProviderMetadata;
+import com.co.flypass.payments.bff.client.external.dto.ExternalPaymentsApiResponse;
 import com.co.flypass.payments.bff.config.PaymentsProperties;
 import com.co.flypass.payments.bff.config.RestClientFactory;
 import com.co.flypass.payments.bff.model.PaymentMethodListItem;
@@ -17,24 +17,24 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
-@Component("bancolombia")
-public final class BancolombiaServiceClient extends AbstractServiceClient<BancolombiaPaymentModeApiResponse> {
+@Component("external")
+public class ExternalPaymentsServiceClient extends AbstractServiceClient<ExternalPaymentsApiResponse> {
 
-    private static final String PROVIDER_ID = "bancolombia";
-    private static final String PAYMENT_METHODS_PATH = "/user/paymentMode";
+    private static final String PROVIDER_ID = "external";
+    private static final String PAYMENT_METHODS_PATH = "/payment-methods";
 
     private final PaymentsProperties paymentsProperties;
     private final RestClientFactory restClientFactory;
-    private final BancolombiaAdapter adapter;
+    private final ExternalPaymentsAdapter adapter;
 
     private RestClient restClient;
 
-    public BancolombiaServiceClient(MeterRegistry meterRegistry,
-                                    CircuitBreakerRegistry circuitBreakerRegistry,
-                                    RetryRegistry retryRegistry,
-                                    PaymentsProperties paymentsProperties,
-                                    RestClientFactory restClientFactory,
-                                    BancolombiaAdapter adapter) {
+    public ExternalPaymentsServiceClient(MeterRegistry meterRegistry,
+                                         CircuitBreakerRegistry circuitBreakerRegistry,
+                                         RetryRegistry retryRegistry,
+                                         PaymentsProperties paymentsProperties,
+                                         RestClientFactory restClientFactory,
+                                         ExternalPaymentsAdapter adapter) {
         super(meterRegistry, circuitBreakerRegistry, retryRegistry);
         this.paymentsProperties = paymentsProperties;
         this.restClientFactory = restClientFactory;
@@ -48,26 +48,25 @@ public final class BancolombiaServiceClient extends AbstractServiceClient<Bancol
     }
 
     @Override
-    protected BancolombiaPaymentModeApiResponse fetchPaymentMethods(String walletId, String authorizationHeader) {
-        var req = restClient.get()
-                .uri(b -> b.path(PAYMENT_METHODS_PATH)
-                        .queryParam("noMatterStatusPaymentMethod", true)
+    protected ExternalPaymentsApiResponse fetchPaymentMethods(String walletId, String authorizationHeader) {
+        RestClient.RequestHeadersSpec<?> req = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(PAYMENT_METHODS_PATH)
+                        .queryParam("walletId", walletId)
                         .build());
-
         if (authorizationHeader != null && !authorizationHeader.isBlank()) {
             req = req.header(HttpHeaders.AUTHORIZATION, authorizationHeader);
         }
-
-        return req.retrieve().body(BancolombiaPaymentModeApiResponse.class);
+        return req.retrieve().body(ExternalPaymentsApiResponse.class);
     }
 
     @Override
-    protected List<PaymentMethodListItem> adaptPaymentMethods(BancolombiaPaymentModeApiResponse raw) {
+    protected List<PaymentMethodListItem> adaptPaymentMethods(ExternalPaymentsApiResponse raw) {
         return adapter.adapt(raw);
     }
 
     @Override
     public ProviderMetadata getMetadata() {
-        return ProviderMetadata.of(PROVIDER_ID, "Bancolombia");
+        return ProviderMetadata.of(PROVIDER_ID, "ExternalPayments");
     }
 }

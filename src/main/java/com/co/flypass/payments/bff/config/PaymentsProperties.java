@@ -1,6 +1,6 @@
 package com.co.flypass.payments.bff.config;
 
-import jakarta.annotation.PostConstruct;
+import com.co.flypass.payments.bff.router.ServiceId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -14,14 +14,17 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Locale;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
 @Validated
 @ConfigurationProperties(prefix = "payments")
-public class PaymentsProperties {
+public final class PaymentsProperties {
+
     @NotBlank
     private final String defaultServiceId;
 
@@ -32,40 +35,56 @@ public class PaymentsProperties {
             String defaultServiceId,
             Map<String, @Valid ServiceConfig> servicesById
     ) {
-        this.defaultServiceId = normalize(defaultServiceId);
-
-        Map<String, ServiceConfig> normalized =
+        final String normalizedDefault = ServiceId.normalize(defaultServiceId, true);
+        final Map<String, ServiceConfig> normalizedMap =
                 servicesById == null
                         ? Map.of()
                         : servicesById.entrySet().stream()
                         .collect(Collectors.toUnmodifiableMap(
-                                e -> normalize(e.getKey()),
+                                e -> ServiceId.normalize(e.getKey(), true),
                                 Map.Entry::getValue
                         ));
 
-        this.servicesById = normalized;
-    }
+        if (normalizedDefault == null || normalizedDefault.isBlank()) {
+            throw new IllegalStateException("Missing configuration: 'payments.default-service-id' must not be blank");
+        }
+        if (normalizedMap.isEmpty()) {
+            throw new IllegalStateException("Missing configuration: 'payments.services-by-id' must not be empty");
+        }
+        if (!normalizedMap.containsKey(normalizedDefault)) {
+            throw new IllegalStateException(
+                    "Invalid configuration: 'payments.default-service-id' (" + normalizedDefault +
+                            ") must match one key in 'payments.services-by-id': " + normalizedMap.keySet());
+        }
+        for (String key : normalizedMap.keySet()) {
+            final String routerNorm = ServiceId.normalize(key, true);
+            if (!key.equals(routerNorm)) {
+                throw new IllegalStateException(
+                        "Invalid key normalization for services-by-id: '" + key + "' should be '" + routerNorm + "'");
+            }
+        }
 
-    @PostConstruct
-    void validate() {
-        if (servicesById.isEmpty()) {
+        final Set<String> allowed = Arrays.stream(ServiceId.values())
+                .map(ServiceId::value)
+                .collect(Collectors.toUnmodifiableSet());
+        if (!allowed.contains(normalizedDefault)) {
             throw new IllegalStateException(
-                    "Missing configuration: 'payments.services-by-id' must not be empty");
+                    "Invalid configuration: 'payments.default-service-id' (" + normalizedDefault + ") must be one of: " + allowed);
         }
-        if (defaultServiceId == null || defaultServiceId.isBlank()) {
-            throw new IllegalStateException(
-                    "Missing configuration: 'payments.default-service-id' must not be blank");
+        for (String key : normalizedMap.keySet()) {
+            if (!allowed.contains(key)) {
+                throw new IllegalStateException(
+                        "Invalid configuration: 'payments.services-by-id' contains unknown id '" + key + "'. Allowed: " + allowed);
+            }
         }
-        if (!servicesById.containsKey(defaultServiceId)) {
-            throw new IllegalStateException(
-                    "Invalid configuration: 'payments.default-service-id' (" + defaultServiceId +
-                            ") must match one key in 'payments.services-by-id': " + servicesById.keySet());
-        }
+
+        this.defaultServiceId = normalizedDefault;
+        this.servicesById = normalizedMap;
     }
 
     public ServiceConfig require(String serviceId) {
-        String id = normalize(serviceId);
-        ServiceConfig cfg = servicesById.get(id);
+        final String id = ServiceId.normalize(serviceId, true);
+        final ServiceConfig cfg = servicesById.get(id);
         if (cfg == null) {
             throw new IllegalArgumentException(
                     "Service '" + serviceId + "' is not configured. Available: " + servicesById.keySet());
@@ -73,19 +92,17 @@ public class PaymentsProperties {
         return cfg;
     }
 
-    private static String normalize(String id) {
-        return id == null ? null : id.trim().toLowerCase(Locale.ROOT);
-    }
-
     @Getter
-    public static class ServiceConfig {
+    public static final class ServiceConfig {
         @NotBlank
         private final String baseUrl;
 
-        @NotNull @DurationUnit(ChronoUnit.MILLIS)
+        @NotNull
+        @DurationUnit(ChronoUnit.MILLIS)
         private final Duration connectTimeout;
 
-        @NotNull @DurationUnit(ChronoUnit.MILLIS)
+        @NotNull
+        @DurationUnit(ChronoUnit.MILLIS)
         private final Duration readTimeout;
 
         @Positive
@@ -97,9 +114,9 @@ public class PaymentsProperties {
                 @DefaultValue("2s") Duration readTimeout,
                 @DefaultValue("3") int maxAttemptsGet
         ) {
-            this.baseUrl = baseUrl;
-            this.connectTimeout = connectTimeout;
-            this.readTimeout = readTimeout;
+            this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl must not be null").trim();
+            this.connectTimeout = Objects.requireNonNull(connectTimeout, "connectTimeout must not be null");
+            this.readTimeout = Objects.requireNonNull(readTimeout, "readTimeout must not be null");
             this.maxAttemptsGet = maxAttemptsGet;
         }
     }

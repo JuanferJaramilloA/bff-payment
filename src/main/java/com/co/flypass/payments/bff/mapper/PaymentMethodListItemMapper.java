@@ -6,50 +6,53 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.NullValueCheckStrategy;
+import org.mapstruct.ReportingPolicy;
 
 @Mapper(
         componentModel = "spring",
-        nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS
+        nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface PaymentMethodListItemMapper {
 
-    @Mapping(target = "brand",        source = "body.userPaymentMethod.franchise.name")
+    @Mapping(target = "brand",        source = "body.userPaymentMethod.franchise.name", qualifiedByName = "normalizeBrand")
     @Mapping(target = "brandIconUrl", source = "body.userPaymentMethod.franchise.picture")
     @Mapping(target = "productLabel", source = "body.userPaymentMethod.productType.name",
-            qualifiedByName = "toProductLabel")
+            qualifiedByName = "normalizeProductLabel")
     @Mapping(target = "isDefault",    source = "body.selected")
-    @Mapping(target = "holderName",   source = ".", qualifiedByName = "resolveHolderNameFromRoot")
-    @Mapping(target = "maskedNumber", source = "body.userPaymentMethod.suffixAccount",
-            qualifiedByName = "maskFromSuffix")
+    @Mapping(target = "holderName",   source = ".", qualifiedByName = "extractHolderNameOrDefault")
+    @Mapping(target = "maskedNumber", source = ".", qualifiedByName = "extractAndMaskSuffix")
     PaymentMethodListItem toListItem(BancolombiaPaymentModeApiResponse src);
 
-    @Named("toProductLabel")
-    default String toProductLabel(String productTypeName) {
-        if (productTypeName == null || productTypeName.isBlank()) return "Tarjeta crédito";
-        String n = productTypeName.toLowerCase();
-        return (n.contains("débito") || n.contains("debito")) ? "Tarjeta débito" : "Tarjeta crédito";
+    @Named("normalizeBrand")
+    default String normalizeBrand(String brand) {
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.normalizeBrand(brand);
     }
 
-    @Named("resolveHolderNameFromRoot")
-    default String resolveHolderNameFromRoot(BancolombiaPaymentModeApiResponse src) {
+    @Named("normalizeProductLabel")
+    default String normalizeProductLabel(String productTypeName) {
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.normalizeProductLabel(productTypeName, "");
+    }
+
+    @Named("extractHolderNameOrDefault")
+    default String extractHolderNameOrDefault(BancolombiaPaymentModeApiResponse src) {
         if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return "Titular";
         var upm = src.body().userPaymentMethod();
         if (upm.user() == null || upm.user().secureUser() == null || upm.user().secureUser().person() == null) {
             return "Titular";
         }
         var p = upm.user().secureUser().person();
-        if (p.fullName() != null && !p.fullName().isBlank()) return p.fullName();
-        String names = p.names() == null ? "" : p.names();
-        String surnames = p.surnames() == null ? "" : p.surnames();
+        if (p.fullName() != null && !p.fullName().isBlank()) return p.fullName().trim();
+        String names = p.names() == null ? "" : p.names().trim();
+        String surnames = p.surnames() == null ? "" : p.surnames().trim();
         String combined = (names + " " + surnames).trim();
-        return combined.isBlank() ? "Titular" : combined;
+        return combined.isEmpty() ? "Titular" : combined;
     }
 
-    @Named("maskFromSuffix")
-    default String maskFromSuffix(String suffix) {
-        if (suffix == null) return "************";
-        String digits = suffix.replaceAll("\\D", "");
-        if (digits.length() > 4) digits = digits.substring(digits.length() - 4);
-        return "************" + digits;
+    @Named("extractAndMaskSuffix")
+    default String extractAndMaskSuffix(BancolombiaPaymentModeApiResponse src) {
+        if (src == null || src.body() == null || src.body().userPaymentMethod() == null) return "****";
+        String suffix = src.body().userPaymentMethod().suffixAccount();
+        return com.co.flypass.payments.bff.adapter.NormalizationUtils.maskCardNumber(suffix);
     }
 }
