@@ -73,6 +73,128 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Link a payment method (provider-specific body)
+      description: |
+        The request body contract depends on the provider indicated by `X-Service-Id`.
+        The BFF does not validate/transform the request; it is passed through to the provider.
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Service-Id
+          in: header
+          required: false
+          description: Provider/service identifier. If absent, the default configured service will be used.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Free-form object. The contract depends on the selected provider.
+      responses:
+        '200':
+          description: Link result (canonical)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkResultDTO'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /wallet/{walletId}/recharges/init:
+    post:
+      summary: Initialize recharge (select payment method)
+      description: |
+        The request body contract depends on the provider indicated by `X-Service-Id`.
+        The BFF does not validate/transform the request; it is passed through to the provider.
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Service-Id
+          in: header
+          required: false
+          description: Provider/service identifier. If absent, the default configured service will be used.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Free-form object. The contract depends on the selected provider.
+      responses:
+        '200':
+          description: Recharge initialization result (canonical)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RechargeInitResultDTO'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -104,6 +226,39 @@ components:
       required:
         - productLabel
         - isDefault
+
+    LinkResultDTO:
+      type: object
+      properties:
+        status:
+          type: string
+        requiresOtp:
+          type: boolean
+          nullable: true
+        requiresSignature:
+          type: boolean
+          nullable: true
+        providerRef:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    RechargeInitResultDTO:
+      type: object
+      properties:
+        status:
+          type: string
+        redirectUrl:
+          type: string
+          nullable: true
+        transactionId:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
 
     ErrorResponse:
       type: object

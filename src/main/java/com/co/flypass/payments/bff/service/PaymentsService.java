@@ -4,10 +4,13 @@ import com.co.flypass.payments.bff.client.ServiceClient;
 import com.co.flypass.payments.bff.client.ServiceClientRegistry;
 import com.co.flypass.payments.bff.config.PaymentsProperties;
 import com.co.flypass.payments.bff.exception.BusinessValidationException;
+import com.co.flypass.payments.bff.model.LinkResultDTO;
 import com.co.flypass.payments.bff.model.PaymentMethodListItem;
+import com.co.flypass.payments.bff.model.RechargeInitResultDTO;
 import com.co.flypass.payments.bff.router.RouteContext;
 import com.co.flypass.payments.bff.router.ServiceId;
 import com.co.flypass.payments.bff.router.resolve.RouteResolver;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -44,6 +47,46 @@ public class PaymentsService {
 
         ServiceClient serviceClient = serviceClientRegistry.get(selectedServiceId);
         return serviceClient.listPaymentMethods(walletId, authorizationHeader);
+    }
+
+    public LinkResultDTO linkPaymentMethod(
+            String walletId,
+            String authorizationHeader,
+            String serviceIdFromHeader,
+            JsonNode body
+    ) {
+        validateWalletId(walletId);
+        String userId = extractUserId(authorizationHeader);
+        validateUserId(userId);
+
+        RouteContext routeContext = new RouteContext(
+                serviceIdFromHeader,
+                paymentsProperties.getDefaultServiceId()
+        );
+        ServiceId selectedServiceId = Objects.requireNonNull(routeResolver.resolve(routeContext),
+                "serviceId resolution returned null");
+        ServiceClient serviceClient = serviceClientRegistry.get(selectedServiceId);
+        return serviceClient.linkPaymentMethod(walletId, authorizationHeader, body);
+    }
+
+    public RechargeInitResultDTO rechargeInit(
+            String walletId,
+            String authorizationHeader,
+            String serviceIdFromHeader,
+            JsonNode body
+    ) {
+        validateWalletId(walletId);
+        String userId = extractUserId(authorizationHeader);
+        validateUserId(userId);
+
+        RouteContext routeContext = new RouteContext(
+                serviceIdFromHeader,
+                paymentsProperties.getDefaultServiceId()
+        );
+        ServiceId selectedServiceId = Objects.requireNonNull(routeResolver.resolve(routeContext),
+                "serviceId resolution returned null");
+        ServiceClient serviceClient = serviceClientRegistry.get(selectedServiceId);
+        return serviceClient.rechargeInit(walletId, authorizationHeader, body);
     }
 
     private static void validateWalletId(String walletId) {

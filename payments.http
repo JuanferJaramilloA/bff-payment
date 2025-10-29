@@ -15,10 +15,10 @@ GET {{baseUrl}}/wallet/{{walletId}}/payment-methods
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
-### 4) BFF (forzando connector via header)
+### 4) BFF (forzando provider via header)
 GET {{baseUrl}}/wallet/{{walletId}}/payment-methods
 Authorization: Bearer {{access_token}}
-X-Service: {{x-service}}
+X-Service-Id: {{x-service}}
 Accept: application/json
 
 ### 5) Endpoint Bancolombia Integration (directo)
@@ -26,3 +26,73 @@ GET https://test.security.flypass.co/flypass/bancolombia-integration/user/paymen
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
+### 6) BFF — vincular medio de pago (passthrough body para Bancolombia)
+POST {{baseUrl}}/wallet/{{walletId}}/payment-methods
+Authorization: Bearer {{access_token}}
+X-Service-Id: {{x-service}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": null,
+  "user": {
+    "id": 35927,
+    "secureUser": {
+      "id": 36451,
+      "person": {
+        "id": 36469,
+        "documentType": 2,
+        "document": "1017241310",
+        "names": "Juan Fernando",
+        "surnames": "Jaramillo",
+        "cellphone": "3168773788",
+        "businessName": null,
+        "capitalizeName": "Juan Fernando",
+        "fullName": "Juan Fernando Jaramillo"
+      },
+      "login": "1017241310"
+    }
+  },
+  "registrationDate": null,
+  "productType": {
+    "id": 0,
+    "name": "Cuenta Ahorros",
+    "description": "Producto con la cuenta de ahorros que enrola el usuario"
+  },
+  "suffixAccount": null,
+  "customName": "testing",
+  "status": null,
+  "signature": null,
+  "accountNumber": "91923193901",
+  "identityCard": "1017241310",
+  "idProductFlypass": null,
+  "attemptOTP": null,
+  "attemptGenerateOTP": null,
+  "cvc": null,
+  "expireMonth": null,
+  "expireYear": null,
+  "quotasNumber": null,
+  "franchise": null,
+  "unlockDate": null,
+  "paymentSource": null,
+  "used": false,
+  "paymentMethodType": {
+    "id": 0
+  },
+  "shouldUpdatePaymentMode": null,
+  "enrolled": false
+}
+
+### 7) BFF — iniciar recarga (selección de medio; passthrough)
+POST {{baseUrl}}/wallet/{{walletId}}/recharges/init
+Authorization: Bearer {{access_token}}
+X-Service-Id: {{x-service}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "method": "PSE",
+  "amount": 10000,
+  "bankCode": "1051",
+  "returnUrl": "https://app.flypass.co/payments/callback"
+}

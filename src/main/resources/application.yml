@@ -30,6 +30,12 @@ resilience4j:
         minimumNumberOfCalls: 5
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
+      yuno:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
   retry:
     instances:
       bancolombia:
@@ -47,6 +53,15 @@ resilience4j:
       external:
         maxAttempts: 2
         waitDuration: 100ms
+        retryExceptions:
+          - org.springframework.web.client.RestClientException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+      yuno:
+        maxAttempts: 2
+        waitDuration: 150ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
         retryExceptions:
           - org.springframework.web.client.RestClientException
         ignoreExceptions:
